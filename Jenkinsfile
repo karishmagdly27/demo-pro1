@@ -114,28 +114,28 @@ pipeline {
 
 def deployToServer(host) {
     sshagent(['app-key']) {
-        sh """
+        sh '''
             echo "Deploying to ${host}..."
 
-            TMP_DIR="/tmp/${APP_NAME}_deploy_\\$\\$"
+            TMP_DIR="/tmp/'${APP_NAME}'_deploy_$$"
 
             # Create temporary directory
-            ssh -o StrictHostKeyChecking=no ubuntu@${host} "mkdir -p \${TMP_DIR}"
+            ssh -o StrictHostKeyChecking=no ubuntu@${host} "mkdir -p $TMP_DIR"
 
             # Copy files to temporary directory
-            scp -o StrictHostKeyChecking=no -r * ubuntu@${host}:\${TMP_DIR}/
+            scp -o StrictHostKeyChecking=no -r * ubuntu@${host}:$TMP_DIR/
 
             # Move files to /var/www/html with sudo
             ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo rm -rf /var/www/html/*"
-            ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo mv \${TMP_DIR}/* /var/www/html/"
+            ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo mv $TMP_DIR/* /var/www/html/"
             ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo chown -R www-data:www-data /var/www/html"
 
             # Clean up temporary folder
-            ssh -o StrictHostKeyChecking=no ubuntu@${host} "rmdir \${TMP_DIR}"
+            ssh -o StrictHostKeyChecking=no ubuntu@${host} "rmdir $TMP_DIR"
 
             # Reload Nginx
             ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo systemctl reload nginx"
-        """
+        '''
     }
 }
 
