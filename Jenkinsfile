@@ -48,7 +48,8 @@ pipeline {
         stage('Package') {
             steps {
                 echo "Packaging application..."
-                sh "zip -r ${APP_NAME}.zip ."
+                // Package only relevant files for web deployment
+                sh "zip -r ${APP_NAME}.zip index.html css js images"
             }
         }
 
@@ -106,10 +107,15 @@ pipeline {
 def deployToServer(host) {
     sshagent(['dev-app-server']) {
         sh """
+        echo "Deploying to ${host}..."
         ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo rm -rf /var/www/html/*"
-        scp -o StrictHostKeyChecking=no -r * ubuntu@${host}:/var/www/html/
-        ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo chown -R www-data:www-data /var/www/html"
-        ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo systemctl reload nginx"
+        scp -o StrictHostKeyChecking=no ${APP_NAME}.zip ubuntu@${host}:/tmp/
+        ssh -o StrictHostKeyChecking=no ubuntu@${host} "
+            sudo unzip -o /tmp/${APP_NAME}.zip -d /var/www/html &&
+            sudo chown -R www-data:www-data /var/www/html &&
+            sudo chmod -R 755 /var/www/html &&
+            sudo systemctl reload nginx
+        "
         """
     }
 }
