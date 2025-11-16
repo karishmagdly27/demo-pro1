@@ -7,31 +7,22 @@ pipeline {
         DEV_HOST      = '3.134.102.126'
         STAGING_HOST  = '3.134.88.210'
         PROD_HOST     = '18.191.129.250'
-        SONAR_HOST    = 'http://13.59.224.139:9000' // SonarQube server URL
+        SONAR_HOST    = 'http://13.59.224.139:9000' 
     }
 
     stages {
-
-        stage('Debug Branch') {
-            steps {
-                echo "BRANCH_NAME = ${env.BRANCH_NAME}"
-            }
-        }
 
         stage('Checkout') {
             steps {
                 script {
                     def branch = env.BRANCH_NAME ?: 'dev'
-                    echo "Checking out branch: ${branch}"
                     git branch: branch, url: "${APP_REPO}", credentialsId: 'git'
                 }
             }
         }
 
         stage('SonarQube Analysis') {
-            when {
-                expression { return ['dev','stg','master'].contains(env.BRANCH_NAME) }
-            }
+            when { expression { return ['dev','stg','master'].contains(env.BRANCH_NAME) } }
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh """
@@ -44,23 +35,21 @@ pipeline {
             }
         }
 
-        stage('Package') {
+        stage('Package App') {
             steps {
-                echo "Packaging application..."
-                // Only include necessary app files
-                sh "zip -r /tmp/${APP_NAME}.zip index.html css js images || true"
+                echo "Packaging frontend application..."
+                sh """
+                    rm -f /tmp/${APP_NAME}.zip
+                    zip -r /tmp/${APP_NAME}.zip ./*
+                """
             }
         }
 
         stage('Upload to Nexus') {
-            when {
-                expression { return ['stg','master'].contains(env.BRANCH_NAME) }
-            }
+            when { expression { return ['stg','master'].contains(env.BRANCH_NAME) } }
             steps {
-                echo "Uploading artifact to Nexus..."
                 nexusArtifactUploader artifacts: [[
                         artifactId: "${APP_NAME}",
-                        classifier: '',
                         file: "/tmp/${APP_NAME}.zip",
                         type: 'zip'
                     ]],
@@ -73,20 +62,18 @@ pipeline {
         }
 
         stage('Deploy') {
-            when {
-                expression { return ['dev','stg','master'].contains(env.BRANCH_NAME) }
-            }
+            when { expression { return ['dev','stg','master'].contains(env.BRANCH_NAME) } }
             steps {
                 script {
-                    def branchMap = [
-                        'dev'   : env.DEV_HOST,
-                        'stg'   : env.STAGING_HOST,
-                        'master': env.PROD_HOST
+                    def targets = [
+                        "dev": DEV_HOST,
+                        "stg": STAGING_HOST,
+                        "master": PROD_HOST
                     ]
-                    def host = branchMap[env.BRANCH_NAME]
+                    def host = targets[env.BRANCH_NAME]
 
-                    if (env.BRANCH_NAME == 'master') {
-                        input message: 'Approve deployment to PROD?', ok: 'Deploy'
+                    if (env.BRANCH_NAME == "master") {
+                        input message: "Deploy to Production?", ok: "Deploy"
                     }
 
                     deployToServer(host)
@@ -96,17 +83,17 @@ pipeline {
     }
 
     post {
-        always { echo 'Pipeline finished.' }
-        success { echo "Build and deployment for ${env.BRANCH_NAME} succeeded." }
-        failure { echo "Build or deployment failed." }
+        always { echo "Pipeline completed." }
+        success { echo "Pipeline succeeded for ${env.BRANCH_NAME}!" }
+        failure { echo "Pipeline FAILED." }
     }
 }
 
-// Function to deploy code to server
-def deployToServer(host) {
-    sshagent(['dev-app-server']) {
+def deployToServer(String host) {
+    sshagent(['app-key']) {
         sh """
-        echo "Deploying ${APP_NAME} to ${host}..."
+        echo "🚀 Deploying ${APP_NAME} to ${host}"
+
         ssh -o StrictHostKeyChecking=no ubuntu@${host} '
             sudo rm -rf /var/www/html/* &&
             sudo unzip -o /tmp/${APP_NAME}.zip -d /var/www/html &&
