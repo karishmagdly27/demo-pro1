@@ -22,9 +22,9 @@ pipeline {
             steps {
                 script {
                     // For multibranch pipeline, BRANCH_NAME should be automatically set
-                    def branch = env.BRANCH_NAME ?: 'dev'  // fallback if missing
+                    def branch = env.BRANCH_NAME ?: 'dev' 
                     echo "Checking out branch: ${branch}"
-                    git branch: branch, url: "${APP_REPO}", credentialsId: 'github-token'
+                    git branch: branch, url: "${APP_REPO}", credentialsId: 'git'
                 }
             }
         }
