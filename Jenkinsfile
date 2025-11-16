@@ -14,6 +14,12 @@ pipeline {
 
     stages {
 
+        stage('Install Dependencies') {
+            steps {
+                sh 'sudo apt update && sudo apt install -y zip unzip'
+            }
+        }
+
         stage('Debug Branch') {
             steps {
                 echo "BRANCH_NAME = ${env.BRANCH_NAME}"
