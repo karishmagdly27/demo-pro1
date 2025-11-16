@@ -42,7 +42,7 @@ pipeline {
         stage('Upload to Nexus') {
             when {
                 expression {
-                    // Only staging (stg) and prod (master) branches upload artifacts
+                    // Only staging (stg) and prod (master) branches upload artifact
                     return ['stg','master'].contains(env.BRANCH_NAME)
                 }
             }
