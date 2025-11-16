@@ -62,19 +62,27 @@ pipeline {
             }
             steps {
                 echo "Uploading artifact to Nexus..."
-                nexusArtifactUploader artifacts: [[
-                        artifactId: "${APP_NAME}",
-                        classifier: '',
-                        file: "${APP_NAME}.zip",
-                        type: 'zip'
-                ]],
-                credentialsId: 'nexus-creds',
-                groupId: 'com.demo',
-                nexusUrl: 'http://3.145.4.201:8081',
-                repository: 'demo-app-repo',
-                version: "${env.BRANCH_NAME}-${BUILD_NUMBER}"
+        
+                nexusArtifactUploader(
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    nexusUrl: '3.145.4.201:8081',
+                    groupId: 'com.demo',
+                    version: "${env.BRANCH_NAME}-${BUILD_NUMBER}",
+                    repository: 'demo-app-repo',
+                    credentialsId: 'nexus-creds',
+                    artifacts: [
+                        [
+                            artifactId: "${APP_NAME}",
+                            classifier: '',
+                            file: "${APP_NAME}.zip",
+                            type: 'zip'
+                        ]
+                    ]
+                )
             }
         }
+
 
         stage('Deploy') {
             when {
