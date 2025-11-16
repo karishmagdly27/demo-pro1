@@ -12,19 +12,32 @@ pipeline {
 
     stages {
 
+        stage('Debug Branch') {
+            steps {
+                echo "BRANCH_NAME = ${env.BRANCH_NAME}"
+            }
+        }
+
         stage('Checkout') {
             steps {
-                echo "Checking out branch: ${env.BRANCH_NAME}"
-                git branch: "${env.BRANCH_NAME}", url: "${APP_REPO}", credentialsId: 'github-token'
+                script {
+                    // For multibranch pipeline, BRANCH_NAME should be automatically set
+                    def branch = env.BRANCH_NAME ?: 'dev'  // fallback if missing
+                    echo "Checking out branch: ${branch}"
+                    git branch: branch, url: "${APP_REPO}", credentialsId: 'github-token'
+                }
             }
         }
 
         stage('SonarQube Analysis') {
+            when {
+                expression { return ['dev','stg','master'].contains(env.BRANCH_NAME) }
+            }
             steps {
-                withSonarQubeEnv('SonarQube') { // Jenkins SonarQube server configurations
+                withSonarQubeEnv('SonarQube') {
                     sh """
                         sonar-scanner \
-                        -Dsonar.projectKey=${APP_NAME}-${BRANCH_NAME} \
+                        -Dsonar.projectKey=${APP_NAME}-${env.BRANCH_NAME} \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_HOST}
                     """
@@ -41,10 +54,7 @@ pipeline {
 
         stage('Upload to Nexus') {
             when {
-                expression {
-                    // Only staging (stg) and prod (master) branches upload artifact
-                    return ['stg','master'].contains(env.BRANCH_NAME)
-                }
+                expression { return ['stg','master'].contains(env.BRANCH_NAME) }
             }
             steps {
                 echo "Uploading artifact to Nexus..."
@@ -64,24 +74,21 @@ pipeline {
 
         stage('Deploy') {
             when {
-                expression {
-                    // Only deploy if branch is dev/stg/master
-                    return ['dev','stg','master'].contains(env.BRANCH_NAME)
-                }
+                expression { return ['dev','stg','master'].contains(env.BRANCH_NAME) }
             }
             steps {
                 script {
-                    // Map branches to environment hosts
                     def branchMap = [
                         'dev'   : env.DEV_HOST,
                         'stg'   : env.STAGING_HOST,
                         'master': env.PROD_HOST
                     ]
-
                     def host = branchMap[env.BRANCH_NAME]
+
                     if (env.BRANCH_NAME == 'master') {
                         input message: 'Approve deployment to PROD?', ok: 'Deploy'
                     }
+
                     deployToServer(host)
                 }
             }
@@ -89,15 +96,9 @@ pipeline {
     }
 
     post {
-        always {
-            echo 'Pipeline finished.'
-        }
-        success {
-            echo "Build and deployment for ${env.BRANCH_NAME} succeeded."
-        }
-        failure {
-            echo "Build or deployment failed."
-        }
+        always { echo 'Pipeline finished.' }
+        success { echo "Build and deployment for ${env.BRANCH_NAME} succeeded." }
+        failure { echo "Build or deployment failed." }
     }
 }
 
