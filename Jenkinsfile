@@ -62,7 +62,6 @@ pipeline {
             }
             steps {
                 echo "Uploading artifact to Nexus..."
-        
                 nexusArtifactUploader(
                     nexusVersion: 'nexus3',
                     protocol: 'http',
@@ -118,14 +117,21 @@ def deployToServer(host) {
         sh """
             echo "Deploying to ${host}..."
 
-            # Clear Nginx default root
+            TMP_DIR="/tmp/${APP_NAME}_deploy_$$"
+
+            # Create temporary directory
+            ssh -o StrictHostKeyChecking=no ubuntu@${host} "mkdir -p \${TMP_DIR}"
+
+            # Copy files to temporary directory
+            scp -o StrictHostKeyChecking=no -r * ubuntu@${host}:\${TMP_DIR}/
+
+            # Move files to /var/www/html with sudo
             ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo rm -rf /var/www/html/*"
-
-            # Copy app file to Nginx root
-            scp -o StrictHostKeyChecking=no -r * ubuntu@${host}:/var/www/html/
-
-            # Set ownership
+            ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo mv \${TMP_DIR}/* /var/www/html/"
             ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo chown -R www-data:www-data /var/www/html"
+
+            # Clean up temporary folder
+            ssh -o StrictHostKeyChecking=no ubuntu@${host} "rmdir \${TMP_DIR}"
 
             # Reload Nginx
             ssh -o StrictHostKeyChecking=no ubuntu@${host} "sudo systemctl reload nginx"
