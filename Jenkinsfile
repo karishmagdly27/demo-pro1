@@ -90,7 +90,7 @@ pipeline {
                     def host = branchMap[env.BRANCH_NAME]
 
                     if (env.BRANCH_NAME == 'master') {
-                        input message: 'Approve deployment to PROD?', ok: 'Deploy'
+                        input message: 'Approve deployment PROD?', ok: 'Deploy'
                     }
 
                     deployToServer(host)
