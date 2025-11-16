@@ -9,7 +9,7 @@ pipeline {
         STAGING_HOST  = '3.134.88.210'
         PROD_HOST     = '18.191.129.250'
 
-        SONAR_HOST    = 'http://13.59.224.139:9000'
+        SONAR_HOST    = 'http://3.21.127.191:9000'
     }
 
     stages {
@@ -65,7 +65,7 @@ pipeline {
                 nexusArtifactUploader(
                     nexusVersion: 'nexus3',
                     protocol: 'http',
-                    nexusUrl: '3.145.4.201:8081',
+                    nexusUrl: 'http://3.18.108.166:8081/',
                     groupId: 'com.demo',
                     version: "${env.BRANCH_NAME}-${BUILD_NUMBER}",
                     repository: 'demo-app-repo',
