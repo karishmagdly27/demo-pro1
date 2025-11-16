@@ -65,7 +65,7 @@ pipeline {
                 nexusArtifactUploader(
                     nexusVersion: 'nexus3',
                     protocol: 'http',
-                    nexusUrl: 'http://3.18.108.166:8081/',
+                    nexusUrl: '3.18.108.166:8081',
                     groupId: 'com.demo',
                     version: "${env.BRANCH_NAME}-${BUILD_NUMBER}",
                     repository: 'demo-app-repo',
